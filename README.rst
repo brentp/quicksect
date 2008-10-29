@@ -1,7 +1,27 @@
+Quicksect
+=========
+
+Description
+-----------
+
+Quicksect is a fast python / cython implementation of interval search based on the pure python version in 
+`bx-python <http://bx-python.trac.bx.psu.edu/>`__ 
+
+It has a reasonable test-suite in tests/. And the doctests in this
+file can be run with
+
+
+$ nosetests --with-doctest --doctest-extension=.rst README.rst
+
+License is MIT.
+
+
+Use
+---
     >>> from quicksect import IntervalNode, Feature
 
 Feature
--------
++++++++
 
 features are just things with a start, stop, and (optional) strand.
 
@@ -19,8 +39,8 @@ and potentially a name:
 
 
 
-intersecter
-===========
+Quicksect
++++++++++
 
     >>> inter = IntervalNode(feats[0])
     >>> for feat in feats[1:]:
@@ -29,13 +49,8 @@ intersecter
     IntervalNode(31, 35)
 
 
-    
 
-search 
-------
-
-intersect
-+++++++++
+**search**
 
     >>> inter.intersect(25, 31)
     [Feature(31, 35, strand=-1), Feature(21, 25, strand=1)]
