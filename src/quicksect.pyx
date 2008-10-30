@@ -89,14 +89,14 @@ class IntervalTree:
         chr = interval.chr
 
         if interval.chr in self.chrs:
-            self.chrs[chr] = self.chrs[chr]._insert(interval)
+            self.chrs[chr] = self.chrs[chr].insert(interval)
         else:
             self.chrs[chr] = IntervalNode(interval)
 
-    def find(self, interval, report_func):
+    def find(self, interval):
         chr = interval.chr
         if chr in self.chrs:
-            self.chrs[chr]._intersect(interval, report_func)
+            return self.chrs[chr].intersect(interval.start, interval.stop)
 
     def traverse( self, func ):
         for item in self.chrs.itervalues():
