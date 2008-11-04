@@ -427,9 +427,22 @@ cdef class IntervalNode:
         return self.right(f, n, max_dist)
 
 
+    """
+    wait for cython to support iterators.
+    def __iter__(self):
+            
+        if self.cleft is not EmptyNode:
+            yield self.cleft
+
+        yield self.interval
+
+        if self.cright is not EmptyNode:
+            yield self.cright
+    """
 
     def traverse(self, func):
         self._traverse(func)
+
 
     cdef void _traverse(IntervalNode self, object func):
         if self.cleft is not EmptyNode: self.cleft._traverse(func)

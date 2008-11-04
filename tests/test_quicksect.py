@@ -143,6 +143,10 @@ class LotsaTestCase(unittest.TestCase):
                         (feat.start <= stop and feat.start >= start)
                         )
 
+    #def test_iter(self):
+    #    tree = self.intervals
+    #    for item in tree:
+    #        print item
 
 if __name__ == "__main__":
     unittest.main()
