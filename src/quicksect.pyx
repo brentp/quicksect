@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.5
 """
 Intersects ... faster.  Suports GenomicInterval datatype and multiple
 chromosomes.
@@ -39,14 +39,14 @@ cdef class Feature:
     cdef public int start, stop, strand
     cdef public object info
     cdef public object name
-    cdef public int chr
+    cdef public object chr
 
-    def __init__(self, int start, int stop, int strand=0, int chr=0, object name="", object info=None):
-        assert start <= stop, "start must be less than stop"
+    def __cinit__(self, int start, int stop, int strand=0, object chr=None, object name=None, object info=None):
+        #assert start <= stop, "start must be less than stop"
         self.start  = start
         self.stop   = stop
-        self.chr    = chr
         self.strand = strand
+        self.chr    = chr
         self.name   = name
         self.info   = info
 
@@ -54,12 +54,26 @@ cdef class Feature:
         fstr = "Feature(%d, %d" % (self.start, self.stop)
         if self.strand != 0:
             fstr += ", strand=%d" % self.strand
-        if strlen(self.name) != 0:
+        if self.name:
             fstr += ', name="' + str(self.name) + '"'
         if not self.info is None:
             fstr += ", " + str(self.info)
         fstr += ")"
         return fstr
+
+    def __reduce__(self):
+        args = self.__getstate__()
+        return type(self), (args.pop('start'), args.pop('stop')), args
+
+    def __getstate__(self):
+        return {'start': self.start, 'stop':self.stop, 'strand':self.strand, 'chr':self.chr, 'name':self.name, 'info':self.info}
+
+    def __setstate__(self, kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+
+
 
 cpdef int distance(Feature f1, Feature f2):
     """\

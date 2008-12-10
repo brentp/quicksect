@@ -148,5 +148,18 @@ class LotsaTestCase(unittest.TestCase):
     #    for item in tree:
     #        print item
 
+from cPickle import dumps, loads
+class PickleTestCase(unittest.TestCase):
+    """ test pickling."""
+    def setUp(self):
+        pass
+
+    def test_feature_pickle(self):
+        f = Feature(22, 38, strand=-1, chr='ddd',name="fred", info={'a':22})
+        g = loads(dumps(f))
+        self.assertEqual(f.start, g.start)
+        self.assertEqual(g.info['a'], 22)
+
+
 if __name__ == "__main__":
     unittest.main()
