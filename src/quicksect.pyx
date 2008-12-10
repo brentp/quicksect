@@ -152,7 +152,7 @@ cdef inline int imax3(int a, int b, int c):
     return c
 
 cdef inline int imin3(int a, int b, int c):
-    if b < a: 
+    if b < a:
         if c < b:
             return c
         return b
@@ -396,7 +396,7 @@ cdef class IntervalNode:
         if self.cright is not EmptyNode:
                 self.cright._seek_right(position, results, n, max_dist)
 
-    def neighbors(self, Feature f, int n=1, int max_dist=2500):
+    def neighbors(self, Feature f, int n=1, int max_dist=25000):
         cdef list neighbors = []
 
         cdef IntervalNode right = self.cright
@@ -408,7 +408,7 @@ cdef class IntervalNode:
             left = left.cright
         return [left, right]
 
-    cpdef left(self, Feature f, int n=1, int max_dist=2500):
+    cpdef left(self, Feature f, int n=1, int max_dist=25000):
         """find n features with a start > than f.stop
         f: a Feature object
         n: the number of features to return
@@ -417,12 +417,17 @@ cdef class IntervalNode:
         cdef list results = []
         # use start - 1 becuase .left() assumes strictly left-of
         self._seek_left(f.start - 1, results, n, max_dist)
-        if len(results) == n: return results
+        if len(results) <= n: return results
         r = results
         r.sort(key=operator.attrgetter('stop'), reverse=True)
+        if distance(f, r[n]) != distance(f, r[n-1]):
+            return r[:n]
+        while distance(r[n], f) == distance(r[n - 1], f):
+            n += 1
         return r[:n]
 
-    cpdef right(self, Feature f, int n=1, int max_dist=2500):
+
+    cpdef right(self, Feature f, int n=1, int max_dist=25000):
         """find n features with a stop < than f.start
         f: a Feature object
         n: the number of features to return
@@ -431,12 +436,16 @@ cdef class IntervalNode:
         cdef list results = []
         # use stop + 1 becuase .right() assumes strictly right-of
         self._seek_right(f.stop + 1, results, n, max_dist)
-        if len(results) == n: return results
+        if len(results) <= n: return results
         r = results
         r.sort(key=operator.attrgetter('start'))
+        if distance(f, r[n]) != distance(f, r[n-1]):
+            return r[:n]
+        while distance(r[n], f) == distance(r[n - 1], f):
+            n += 1
         return r[:n]
 
-    def upstream(self, Feature f, int n=1, int max_dist=2500):
+    def upstream(self, Feature f, int n=1, int max_dist=25000):
         """find n upstream features where upstream is determined by
         the strand of the query Feature f
         Overlapping features are not considered.
@@ -449,7 +458,7 @@ cdef class IntervalNode:
             return self.right(f, n, max_dist)
         return self.left(f, n, max_dist)
 
-    def downstream(self, Feature f, int n=1, int max_dist=2500):
+    def downstream(self, Feature f, int n=1, int max_dist=25000):
         """find n downstream features where downstream is determined by
         the strand of the query Feature f
         Overlapping features are not considered.
