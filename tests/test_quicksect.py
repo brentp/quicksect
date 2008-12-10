@@ -5,10 +5,11 @@ try:
 except:
     sys.path.insert(0, os.path.dirname(os.path.abspath(".")))
 
-from quicksect import Feature
-from quicksect import IntervalNode
+from quicksect import Feature, IntervalNode, IntervalTree
 
 import quicksect
+from cPickle import dumps, loads
+import operator
 
 class NeighborTestCase(unittest.TestCase):
 
@@ -148,7 +149,6 @@ class LotsaTestCase(unittest.TestCase):
     #    for item in tree:
     #        print item
 
-from cPickle import dumps, loads
 class PickleTestCase(unittest.TestCase):
     """ test pickling."""
     def setUp(self):
@@ -159,6 +159,30 @@ class PickleTestCase(unittest.TestCase):
         g = loads(dumps(f))
         self.assertEqual(f.start, g.start)
         self.assertEqual(g.info['a'], 22)
+
+    def test_tree_pickle(self):
+        a = IntervalTree()
+        for ichr in range(5):
+            for i in range(10, 100, 6):
+                f = Feature(i -4, i + 4, strand=1, chr=ichr)
+                a.insert(f)
+        
+        a.dump('a.pkl')
+
+        b = IntervalTree()
+        b.load('a.pkl')
+        for ichr in range(5):
+            for i in range(10, 100, 6):
+                f = Feature(i -4, i + 4, strand=1, chr=ichr)
+                af = sorted(a.find(f), key=operator.attrgetter('start'))
+                bf = sorted(b.find(f), key=operator.attrgetter('start'))
+
+                assert len(bf) > 0
+                self.assertEqual(len(af), len(bf))
+                self.assertEqual(af[0].start, bf[0].start)
+                self.assertEqual(af[-1].start, bf[-1].start)
+
+
 
 
 if __name__ == "__main__":

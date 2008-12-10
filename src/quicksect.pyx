@@ -112,16 +112,38 @@ class IntervalTree:
         if chr in self.chrs:
             return self.chrs[chr].intersect(interval.start, interval.stop)
 
-    def traverse( self, func ):
+    def traverse(self, func):
         for item in self.chrs.itervalues():
-            item._traverse( func )
+            item.traverse(func)
+
+    def dump(self, fn):
+        import cPickle
+        l = []
+        a = l.append
+        self.traverse(a)
+        fh = open(fn, "wb")
+        for f in l:
+            cPickle.dump(f.interval, fh)
+
+    def load(self, fn):
+        import cPickle
+        fh = open(fn, "rb")
+        while True:
+            try:
+                feature = cPickle.load(fh)
+                self.insert(feature)
+            except EOFError:
+                break
+
+
+
 
 cdef inline int imax2(int a, int b):
     if b > a: return b
     return a
 
 cdef inline int imax3(int a, int b, int c):
-    if b > a: 
+    if b > a:
         if c > b:
             return c
         return b
@@ -216,7 +238,7 @@ cdef class IntervalNode:
 
     """
     cdef float priority
-    cdef Feature interval 
+    cdef public Feature interval
     cdef public int start, stop
     cdef int minstop, maxstop, minstart
     cdef IntervalNode cleft, cright, croot
