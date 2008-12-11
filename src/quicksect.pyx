@@ -56,6 +56,9 @@ cdef class Feature:
             fstr += ", strand=%d" % self.strand
         if self.name:
             fstr += ', name="' + str(self.name) + '"'
+        if self.chr:
+            fstr += ', chr="' + str(self.chr) + '"'
+
         if not self.info is None:
             fstr += ", " + str(self.info)
         fstr += ")"
@@ -123,7 +126,7 @@ class IntervalTree:
         self.traverse(a)
         fh = open(fn, "wb")
         for f in l:
-            cPickle.dump(f.interval, fh)
+            cPickle.dump(f, fh)
 
     def load(self, fn):
         import cPickle
@@ -491,7 +494,7 @@ cdef class IntervalNode:
 
     cdef void _traverse(IntervalNode self, object func):
         if self.cleft is not EmptyNode: self.cleft._traverse(func)
-        func(self)
+        func(self.interval)
         if self.cright is not EmptyNode: self.cright._traverse(func)
 
 
