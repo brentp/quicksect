@@ -10,6 +10,11 @@ Quicksect is a fast python / cython implementation of interval search based on t
 It has a reasonable test-suite in tests/. And the doctests in this
 file can be run with
 
+UPDATE: James Taylor has incoporated this code back into bx-python (with his improvements
+        and compatibility changes)
+        get the code from `bitbucket <http://bitbucket.org/james_taylor/bx-python/>`__
+
+
 
 $ nosetests --with-doctest --doctest-extension=.rst README.rst
 
@@ -65,5 +70,6 @@ Quicksect
 
     >>> inter.right(Feature(26, 26), n=1)
     [Feature(31, 35, strand=-1)]
+
 
 

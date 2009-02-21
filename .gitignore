@@ -1,3 +1,4 @@
 *.so
 src/*.c
 *.pyc
+build

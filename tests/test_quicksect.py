@@ -274,6 +274,9 @@ class PickleTestCase(unittest.TestCase):
                 self.assertEqual(af[-1].start, bf[-1].start)
 
 
+def main():
+    unittest.main()
+
 
 
 if __name__ == "__main__":
