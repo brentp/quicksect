@@ -13,9 +13,12 @@ I have brought this project back from the dead because I want a fast, simple, no
 tree.
 
 
-$ python setup.py test
-
 License is MIT.
+
+Installation
+------------
+
+    pip install quicksect
 
 Use
 ---
@@ -39,6 +42,12 @@ Most common use will be via IntervalTree:
     (88, 444)
 
 Thats pretty much everything you need to know about the tree.
+
+
+Test
+----
+
+$ python setup.py test
 
 Low-Level
 +++++++++
