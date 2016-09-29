@@ -1,28 +1,17 @@
-#from setuptools import setup
-#from distutils.extension import Extension
-#from Cython.Distutils import build_ext
-##
-##print 'remember to cython --convert-range intersection.pyx before  setup.py build_ext --inplace'
-#import os
-#os.system('cython --convert-range src/quicksect.pyx')
-#
+from Cython.Build import cythonize
+from setuptools.extension import Extension
+from setuptools import setup, find_packages
 
+extensions = cythonize([Extension("quicksect", ["src/quicksect.pyx"])])
 
-from distutils.core import setup
-from Cython.Distutils.extension import Extension
-from distutils.extension import Extension
-from Cython.Distutils import build_ext
-
-setup(name="quicksect", script_args = ['build',     '--build-base', 'src/',
-                     'build_ext', '--force', '--inplace',
-                     ],
-      ext_modules = [Extension("quicksect", ["src/quicksect.pyx"],
-                               include_dirs=[])],
-      cmdclass    = {'build_ext' : build_ext},
-    )
-
-
-from distutils.core import setup
-setup( name = 'quicksect'
-        , ext_modules=[ Extension("quicksect", sources=["src/quicksect.c"])]
-  )
+setup(version='0.0.1',
+	  name='quicksect',
+      description="fast, simple interval intersection",
+      long_description=open('README.rst').read(),
+      author="Brent Pedersen",
+      author_email="bpederse@gmail.com",
+      packages=find_packages(),
+      ext_modules=cythonize(extensions),
+      test_suite='nose.collector',
+      tests_require='nose',
+)

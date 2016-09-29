@@ -6,70 +6,53 @@ Description
 
 Quicksect is a fast python / cython implementation of interval search based on the pure python version in 
 `bx-python <http://bx-python.trac.bx.psu.edu/>`__ 
+I pulled it out, optimized and converted to cython and James Taylor has incoporated it back into bx-python
+with his improvements.
 
-It has a reasonable test-suite in tests/. And the doctests in this
-file can be run with
-
-UPDATE: James Taylor has incoporated this code back into bx-python (with his improvements
-        and compatibility changes)
-        get the code from `bitbucket <http://bitbucket.org/james_taylor/bx-python/>`__
+I have brought this project back from the dead because I want a fast, simple, no-dependencies Interval
+tree.
 
 
-
-$ nosetests --with-doctest --doctest-extension=.rst README.rst
+$ python setup.py test
 
 License is MIT.
 
-
 Use
 ---
-    >>> from quicksect import IntervalNode, Feature
+    >>> from quicksect import IntervalNode, Interval, IntervalTree
 
-Feature
-+++++++
+Most common use will be via IntervalTree:
 
-features are just things with a start, stop, and (optional) strand.
+    >>> tree = IntervalTree()
+    >>> tree.add(23, 45)
+    >>> tree.add(55, 66)
+    >>> tree.search(46, 47)
+    []
+    >>> tree.search(44, 56)
+    [Interval(55, 66), Interval(23, 45)]
 
-make some fake features...
-    >>> starts  = [x for x in range(1, 100, 10)]
-    >>> stops   = [s + 4 for s in starts]
-    >>> strands = [ i % 2 == 0 and 1 or -1 for i in range(len(starts))]
+    >>> tree.insert(Interval(88, 444))
+    >>> res = tree.find(Interval(99, 100))
+    >>> res
+    [Interval(88, 444)]
+    >>> res[0].start, res[0].end
+    (88, 444)
 
-the feature class:
-    >>> feats = [Feature(start, stop, strand) for (start, stop, strand) in zip(starts, stops, strands)]
+Thats pretty much everything you need to know about the tree.
 
-and potentially a name:
-    >>> Feature(1001, 1003, strand=-1, name="fred")
-    Feature(1001, 1003, strand=-1, name="fred")
-
-
-
-Quicksect
+Low-Level
 +++++++++
 
-    >>> inter = IntervalNode(feats[0])
-    >>> for feat in feats[1:]:
-    ...     inter = inter.insert(feat)
-    >>> inter                                  #doctest: +ELLIPSIS
-    IntervalNode(31, 35)
+In some cases, users may want to utilize the lower-level interface that accesses
+the nodes of the tree:
 
+    >>> inter = IntervalNode(Interval(22, 33))
+    >>> inter = inter.insert(Interval(44, 55))
+    >>> inter.intersect(24, 26)
+    [Interval(22, 33)]
 
+    >>> inter.left(Interval(34, 35), n=1)
+    [Interval(22, 33)]
 
-**search**
-
-    >>> inter.intersect(25, 31)
-    [Feature(31, 35, strand=-1), Feature(21, 25, strand=1)]
-
-    >>> inter.intersect(23, 33)
-    [Feature(31, 35, strand=-1), Feature(21, 25, strand=1)]
-
-
-
-    >>> inter.left(Feature(26, 26), n=1)
-    [Feature(21, 25, strand=1)]
-
-    >>> inter.right(Feature(26, 26), n=1)
-    [Feature(31, 35, strand=-1)]
-
-
-
+    >>> inter.right(Interval(34, 35), n=1)
+    [Interval(44, 55)]

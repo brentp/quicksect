@@ -14,122 +14,91 @@ cdef extern from "stdlib.h":
     int strlen(char *)
     int iabs(int)
 
-#cdef class Interval:
-#    cdef public int start, stop
-#    def __init__(self, int start, int stop):
-#        self.start  = start
-#        self.stop   = stop
-
-ctypedef char * char_star
-
-cdef class Feature:
-    """\
-    Basic feature, with required integer start and stop properties.
-    Also accpets optional strand as +1 or -1 (used for up/downstream queries),
-    a name, and any arbitrary data is sent in on the info keyword argument
-
-    >>> from quicksect import Feature
-
-    >>> f1 = Feature(23, 36)
-    >>> f2 = Feature(34, 48, strand=-1, name="fred", info={'chr':12, 'anno':'transposon'})
-    >>> f2
-    Feature(34, 48, strand=-1, name="fred", {'anno': 'transposon', 'chr': 12})
-
-    """
-    cdef public int start, stop, strand
-    cdef public object info
-    cdef public object name
-    cdef public object chr
-
-    def __cinit__(self, int start, int stop, int strand=0, object chr=None, object name=None, object info=None):
-        #assert start <= stop, "start must be less than stop"
-        self.start  = start
-        self.stop   = stop
-        self.strand = strand
-        self.chr    = chr
-        self.name   = name
-        self.info   = info
-
+cdef class Interval:
+    cdef public int start, end
+    cdef public object data
+    def __init__(self, int start, int end, data=None):
+        self.start = start
+        self.end = end
+        self.data = data
     def __repr__(self):
-        fstr = "Feature(%d, %d" % (self.start, self.stop)
-        if self.strand != 0:
-            fstr += ", strand=%d" % self.strand
-        if self.name:
-            fstr += ', name="' + str(self.name) + '"'
-        if self.chr:
-            fstr += ', chr="' + str(self.chr) + '"'
-
-        if not self.info is None:
-            fstr += ", " + str(self.info)
-        fstr += ")"
-        return fstr
-
+        if self.data is not None:
+            return "Interval(%d, %d, data=%s)" % (self.start, self.end, self.data)
+        else:
+            return "Interval(%d, %d)" % (self.start, self.end)
     def __reduce__(self):
         args = self.__getstate__()
-        return type(self), (args.pop('start'), args.pop('stop')), args
+        return type(self), (args.pop('start'), args.pop('end')), args
 
     def __getstate__(self):
-        return {'start': self.start, 'stop':self.stop, 'strand':self.strand, 'chr':self.chr, 'name':self.name, 'info':self.info}
+        return {'start': self.start, 'end': self.end, 'data': self.data}
 
     def __setstate__(self, kwargs):
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
+        self.data = kwargs['data']
 
-
-
-
-cpdef int distance(Feature f1, Feature f2):
+cpdef int distance(Interval f1, Interval f2):
     """\
     Distance between 2 features. The integer result is always positive or zero.
     If the features overlap or touch, it is zero.
-    >>> from quicksect import Feature, distance
-    >>> distance(Feature(1, 2), Feature(12, 13))
+    >>> from quicksect import Interval, distance
+    >>> distance(Interval(1, 2), Interval(12, 13))
     10
-    >>> distance(Feature(1, 2), Feature(2, 3))
+    >>> distance(Interval(1, 2), Interval(2, 3))
     0
-    >>> distance(Feature(1, 100), Feature(20, 30))
+    >>> distance(Interval(1, 100), Interval(20, 30))
     0
 
     """
-    if f1.stop < f2.start: return f2.start - f1.stop
-    if f2.stop < f1.start: return f1.start - f2.stop
+    if f1.end < f2.start: return f2.start - f1.end
+    if f2.end < f1.start: return f1.start - f2.end
     return 0
 
 
-
-class IntervalTree:
+cdef class IntervalTree:
+    cdef IntervalNode root
 
     def __init__(self):
-        self.chrs = {}
+        self.root = None
 
-    def insert(self, Feature interval):
-        chr = interval.chr
+    cpdef insert(self, Interval interval):
 
-        if interval.chr in self.chrs:
-            self.chrs[chr] = self.chrs[chr].insert(interval)
+        if self.root is None:
+            self.root = IntervalNode(interval)
         else:
-            self.chrs[chr] = IntervalNode(interval)
+            self.root = self.root.insert(interval)
+
+    def add(self, int start, int end, other=None):
+        return self.insert(Interval(start, end, other))
 
     def find(self, interval):
-        chr = interval.chr
-        if chr in self.chrs:
-            return self.chrs[chr].intersect(interval.start, interval.stop)
+        return self.root.intersect(interval.start, interval.end)
 
-    def traverse(self, func):
-        for item in self.chrs.itervalues():
-            item.traverse(func)
+    def search(self, int start, int end):
+        return self.root.intersect(start, end)
+
+    def left(self, Interval f, int n=1, int max_dist=25000):
+        return self.root.left(f, n, max_dist)
+
+    def right(self, Interval f, int n=1, int max_dist=25000):
+        return self.root.right(f, n, max_dist)
 
     def dump(self, fn):
-        import cPickle
+        try:
+            import cPickle
+        except ImportError:
+            import pickle as cPickle
         l = []
         a = l.append
-        self.traverse(a)
+        self.root.traverse(a)
         fh = open(fn, "wb")
         for f in l:
             cPickle.dump(f, fh)
 
     def load(self, fn):
-        import cPickle
+        try:
+            import cPickle
+        except ImportError:
+            import pickle as cPickle
         fh = open(fn, "rb")
         while True:
             try:
@@ -137,8 +106,6 @@ class IntervalTree:
                 self.insert(feature)
             except EOFError:
                 break
-
-
 
 
 cdef inline int imax2(int a, int b):
@@ -177,19 +144,18 @@ cdef class IntervalNode:
 
     Usage
     =====
-    >>> from quicksect import IntervalNode, Feature
-    >>> tree = IntervalNode(Feature(0, 10, -1))
+    >>> from quicksect import IntervalNode, Interval
+    >>> tree = IntervalNode(Interval(0, 10))
 
     Add intervals, the only requirement is that the interval have integer
     start and end attributes. Optional arguments are strand, name, and info.
 
-    >>> Feature(1, 22, strand=-1, name="fred", info={'chr':12, 'anno': 'anything'})
-    Feature(1, 22, strand=-1, name="fred", {'anno': 'anything', 'chr': 12})
+    >>> Interval(1, 22, info={'chr':12, 'anno': 'anything'})
 
 
-    >>> tree = tree.insert(Feature(3, 7, 1))
-    >>> tree = tree.insert(Feature(3, 40, -1))
-    >>> tree = tree.insert(Feature(13, 50, 1))
+    >>> tree = tree.insert(Interval(3, 7, 1))
+    >>> tree = tree.insert(Interval(3, 40, -1))
+    >>> tree = tree.insert(Interval(13, 50, 1))
 
     Queries
     -------
@@ -198,9 +164,9 @@ cdef class IntervalNode:
     ++++
 
     >>> tree.find(2, 5)
-    [Feature(3, 7, strand=1), Feature(3, 40, strand=-1), Feature(0, 10, strand=-1)]
+    [Interval(3, 7), Interval(3, 40), Interval(0, 10)]
     >>> tree.find(11, 100)
-    [Feature(13, 50, strand=1), Feature(3, 40, strand=-1)]
+    [Interval(13, 50), Interval(3, 40)]
     >>> tree.find(100, 200)
     []
 
@@ -209,40 +175,15 @@ cdef class IntervalNode:
     the left method finds features that are strictly to the left of
     the query feature. overlapping features are not considered:
 
-    >>> tree.left(Feature(0, 1))
+    >>> tree.left(Interval(0, 1))
     []
-    >>> tree.left(Feature(11, 12))
-    [Feature(0, 10, strand=-1)]
-
-
-    up/downstream
-    +++++++++++++
-    up/downstream method behave exactly like left/right, except that
-    the direction is determined by the strand of the query feature. 
-    If the strand is 1, then upstream is left, downstream is right.
-
-    If the strand is -1, then upstream is right, downstream is left.
-    >>> tree.upstream(Feature(11, 12, strand=1))
-    [Feature(0, 10, strand=-1)]
-    >>> tree.upstream(Feature(11, 12, strand=-1))
-    [Feature(13, 50, strand=1)]
-
-    all of these method take an argument 'n' for the number of results desired.
-    >>> tree.upstream(Feature(1, 2, strand=-1), n=3)
-    [Feature(3, 40, strand=-1), Feature(3, 7, strand=1), Feature(13, 50, strand=1)]
-    
-    nearest neighbors
-    +++++++++++++++++
-    #>>> tree.nearest_neighbors(Feature(1, 2))
-    #[Feature(0, 10, strand=-1)]
-
-    #>>> tree.nearest_neighbors(Feature(1, 2), n=2)
-    #[Feature(0, 10, strand=-1), Feature(3, 7, strand=1)]
+    >>> tree.left(Interval(11, 12))
+    [Interval(0, 10)]
 
     """
     cdef float priority
-    cdef public Feature interval
-    cdef public int start, stop
+    cdef public Interval interval
+    cdef public int start, end
     cdef int minstop, maxstop, minstart
     cdef IntervalNode cleft, cright, croot
 
@@ -259,20 +200,20 @@ cdef class IntervalNode:
 
 
     def __repr__(self):
-        return "IntervalNode(%i, %i)" % (self.start, self.stop)
+        return "IntervalNode(%i, %i)" % (self.start, self.end)
 
-    def __cinit__(IntervalNode self, Feature interval):
+    def __cinit__(IntervalNode self, Interval interval):
         # Python lacks the binomial distribution, so we convert a
         # uniform into a binomial because it naturally scales with
         # tree size.  Also, python's uniform is perfect since the
         # upper limit is not inclusive, which gives us undefined here.
         self.priority   = ceil(nlog * log(-1.0/(1.0 * rand()/RAND_MAX - 1)))
         self.start      = interval.start
-        self.stop       = interval.stop
+        self.end       = interval.end
         self.interval   = interval
-        self.maxstop    = interval.stop
+        self.maxstop    = interval.end
         self.minstart   = interval.start
-        self.minstop    = interval.stop
+        self.minstop    = interval.end
         self.cleft       = EmptyNode
         self.cright      = EmptyNode
         self.croot       = EmptyNode
@@ -280,7 +221,7 @@ cdef class IntervalNode:
     def insert(self, interval):
         return self._insert(interval)
 
-    cdef IntervalNode _insert(IntervalNode self, Feature interval):
+    cdef IntervalNode _insert(IntervalNode self, Interval interval):
         cdef IntervalNode croot = self
         if interval.start > self.start:
 
@@ -324,16 +265,16 @@ cdef class IntervalNode:
 
     cdef inline void set_stops(IntervalNode self):
         if self.cright is not EmptyNode and self.cleft is not EmptyNode: 
-            self.maxstop = imax3(self.stop, self.cright.maxstop, self.cleft.maxstop)
-            self.minstop = imin3(self.stop, self.cright.minstop, self.cleft.minstop)
+            self.maxstop = imax3(self.end, self.cright.maxstop, self.cleft.maxstop)
+            self.minstop = imin3(self.end, self.cright.minstop, self.cleft.minstop)
             self.minstart = imin3(self.start, self.cright.minstart, self.cleft.minstart)
         elif self.cright is not EmptyNode:
-            self.maxstop = imax2(self.stop, self.cright.maxstop)
-            self.minstop = imin2(self.stop, self.cright.minstop)
+            self.maxstop = imax2(self.end, self.cright.maxstop)
+            self.minstop = imin2(self.end, self.cright.minstop)
             self.minstart = imin2(self.start, self.cright.minstart)
         elif self.cleft is not EmptyNode:
-            self.maxstop = imax2(self.stop, self.cleft.maxstop)
-            self.minstop = imin2(self.stop, self.cleft.minstop)
+            self.maxstop = imax2(self.end, self.cleft.maxstop)
+            self.minstop = imin2(self.end, self.cleft.minstop)
             self.minstart = imin2(self.start, self.cleft.minstart)
         
 
@@ -350,8 +291,8 @@ cdef class IntervalNode:
         
     cdef void _intersect(IntervalNode self, int start, int stop, list results):
         # to have starts, stops be non-inclusive, replace <= with <  and >= with >
-        #if start <= self.stop and stop >= self.start: results.append(self.interval)
-        if (not self.stop < start) and (not self.start > stop): results.append(self.interval)
+        #if start <= self.end and stop >= self.start: results.append(self.interval)
+        if (not self.end < start) and (not self.start > stop): results.append(self.interval)
         #if self.cleft is not EmptyNode and start <= self.cleft.maxstop:
         if self.cleft is not EmptyNode and not self.cleft.maxstop < start:
             self.cleft._intersect(start, stop, results)
@@ -372,7 +313,7 @@ cdef class IntervalNode:
         if self.cright is not EmptyNode:
                 self.cright._seek_left(position, results, n, max_dist)
 
-        if -1 < position - self.stop < max_dist:
+        if -1 < position - self.end < max_dist:
             results.append(self.interval)
 
         # TODO: can these conditionals be more stringent?
@@ -399,7 +340,7 @@ cdef class IntervalNode:
         if self.cright is not EmptyNode:
                 self.cright._seek_right(position, results, n, max_dist)
 
-    def neighbors(self, Feature f, int n=1, int max_dist=25000):
+    def neighbors(self, Interval f, int n=1, int max_dist=25000):
         cdef list neighbors = []
 
         cdef IntervalNode right = self.cright
@@ -411,9 +352,9 @@ cdef class IntervalNode:
             left = left.cright
         return [left, right]
 
-    cpdef left(self, Feature f, int n=1, int max_dist=25000):
-        """find n features with a start > than f.stop
-        f: a Feature object
+    cpdef left(self, Interval f, int n=1, int max_dist=25000):
+        """find n features with a start > than f.end
+        f: a Interval object
         n: the number of features to return
         max_dist: the maximum distance to look before giving up.
         """
@@ -422,7 +363,7 @@ cdef class IntervalNode:
         self._seek_left(f.start - 1, results, n, max_dist)
         if len(results) <= n: return results
         r = results
-        r.sort(key=operator.attrgetter('stop'), reverse=True)
+        r.sort(key=operator.attrgetter('end'), reverse=True)
         if distance(f, r[n]) != distance(f, r[n-1]):
             return r[:n]
         while distance(r[n], f) == distance(r[n - 1], f):
@@ -430,15 +371,15 @@ cdef class IntervalNode:
         return r[:n]
 
 
-    cpdef right(self, Feature f, int n=1, int max_dist=25000):
+    cpdef right(self, Interval f, int n=1, int max_dist=25000):
         """find n features with a stop < than f.start
-        f: a Feature object
+        f: a Interval object
         n: the number of features to return
         max_dist: the maximum distance to look before giving up.
         """
         cdef list results = []
         # use stop + 1 becuase .right() assumes strictly right-of
-        self._seek_right(f.stop + 1, results, n, max_dist)
+        self._seek_right(f.end + 1, results, n, max_dist)
         if len(results) <= n: return results
         r = results
         r.sort(key=operator.attrgetter('start'))
@@ -448,35 +389,6 @@ cdef class IntervalNode:
             n += 1
         return r[:n]
 
-    def upstream(self, Feature f, int n=1, int max_dist=25000):
-        """find n upstream features where upstream is determined by
-        the strand of the query Feature f
-        Overlapping features are not considered.
-
-        f: a Feature object
-        n: the number of features to return
-        max_dist: the maximum distance to look before giving up.
-        """
-        if f.strand == -1:
-            return self.right(f, n, max_dist)
-        return self.left(f, n, max_dist)
-
-    def downstream(self, Feature f, int n=1, int max_dist=25000):
-        """find n downstream features where downstream is determined by
-        the strand of the query Feature f
-        Overlapping features are not considered.
-
-        f: a Feature object
-        n: the number of features to return
-        max_dist: the maximum distance to look before giving up.
-        """
-        if f.strand == -1:
-            return self.left(f, n, max_dist)
-        return self.right(f, n, max_dist)
-
-
-    """
-    wait for cython to support iterators.
     def __iter__(self):
             
         if self.cleft is not EmptyNode:
@@ -486,7 +398,6 @@ cdef class IntervalNode:
 
         if self.cright is not EmptyNode:
             yield self.cright
-    """
 
     def traverse(self, func):
         self._traverse(func)
@@ -498,4 +409,4 @@ cdef class IntervalNode:
         if self.cright is not EmptyNode: self.cright._traverse(func)
 
 
-cdef IntervalNode EmptyNode = IntervalNode(Feature(0, 0))
+cdef IntervalNode EmptyNode = IntervalNode(Interval(0, 0))
