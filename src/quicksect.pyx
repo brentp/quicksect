@@ -71,16 +71,28 @@ cdef class IntervalTree:
         return self.insert(Interval(start, end, other))
 
     def find(self, interval):
-        return self.root.intersect(interval.start, interval.end)
+        if self.root is None:
+            return []
+        else:
+            return self.root.intersect(interval.start, interval.end)
 
     def search(self, int start, int end):
-        return self.root.intersect(start, end)
+        if self.root is None:
+            return []
+        else:
+            return self.root.intersect(start, end)
 
     def left(self, Interval f, int n=1, int max_dist=25000):
-        return self.root.left(f, n, max_dist)
+        if self.root is None:
+            return []
+        else:
+            return self.root.left(f, n, max_dist)
 
     def right(self, Interval f, int n=1, int max_dist=25000):
-        return self.root.right(f, n, max_dist)
+        if self.root is None:
+            return []
+        else:
+            return self.root.right(f, n, max_dist)
 
     def dump(self, fn):
         try:

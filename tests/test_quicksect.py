@@ -238,6 +238,24 @@ class PickleTestCase(unittest.TestCase):
                 self.assertEqual(af[0].start, bf[0].start)
                 self.assertEqual(af[-1].start, bf[-1].start)
 
+class EmptyTreeTestCase(unittest.TestCase):
+    """ test search on an empty tree."""
+
+    def setUp(self):
+        self.tree = IntervalTree()
+
+    def test_search(self):
+        self.tree.search(46, 47)
+
+    def test_find(self):
+        self.tree.find(Interval(46, 47))
+
+    def test_left(self):
+        self.tree.left(Interval(46, 47))
+
+    def test_right(self):
+        self.tree.right(Interval(46, 47))
+
 
 def main():
     unittest.main()
