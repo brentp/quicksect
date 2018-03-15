@@ -1,8 +1,12 @@
 Quicksect
 =========
 
+.. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.png
+    :target: http://bioconda.github.io/recipes/quicksect/README.html
+
 Description
 -----------
+
 
 Quicksect is a fast python / cython implementation of interval search based on the pure python version in 
 `bx-python <http://bx-python.trac.bx.psu.edu/>`__ 
@@ -19,6 +23,10 @@ Installation
 ------------
 
     pip install quicksect
+
+or
+
+    conda install -c bioconda quicksect
 
 Use
 ---
