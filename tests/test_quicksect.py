@@ -257,6 +257,20 @@ class EmptyTreeTestCase(unittest.TestCase):
         self.tree.right(Interval(46, 47))
 
 
+class TestIssue9(unittest.TestCase):
+    def setUp(self):
+        self.tree4 = IntervalTree()
+        self.tree4.insert(Interval(22, 33, data='example1'))
+        self.tree4.insert(Interval(22, 33, data='example2'))
+
+    def test_right(self):
+        self.assertEqual(0, len(self.tree4.right(Interval(44,55))))
+        self.assertEqual(2, len(self.tree4.right(Interval(11,12))))
+
+    def test_left(self):
+        self.assertEqual(2, len(self.tree4.left(Interval(44,55))))
+        self.assertEqual(0, len(self.tree4.left(Interval(11,12))))
+
 def main():
     unittest.main()
 

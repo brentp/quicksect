@@ -378,7 +378,7 @@ cdef class IntervalNode:
         r.sort(key=operator.attrgetter('end'), reverse=True)
         if distance(f, r[n]) != distance(f, r[n-1]):
             return r[:n]
-        while distance(r[n], f) == distance(r[n - 1], f):
+        while n < len(r) and distance(r[n], f) == distance(r[n - 1], f):
             n += 1
         return r[:n]
 
@@ -397,7 +397,7 @@ cdef class IntervalNode:
         r.sort(key=operator.attrgetter('start'))
         if distance(f, r[n]) != distance(f, r[n-1]):
             return r[:n]
-        while distance(r[n], f) == distance(r[n - 1], f):
+        while n < len(r) and distance(r[n], f) == distance(r[n - 1], f):
             n += 1
         return r[:n]
 
