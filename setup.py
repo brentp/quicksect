@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 extensions = [Extension("quicksect", ["src/quicksect.pyx"])]
 
-setup(version='0.2.0',
+setup(version='0.2.2',
 	  name='quicksect',
       description="fast, simple interval intersection",
       long_description=open('README.rst').read(),
